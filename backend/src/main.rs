@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate rocket;
+use rocket::fs::FileServer;
 
 mod error;
 mod hr;
@@ -27,6 +28,7 @@ async fn main() -> Result<(), rocket::Error> {
     let _rocket = rocket::build()
         .attach(cors.to_cors().unwrap())
         .manage(hr::Database::new())
+        .mount("/", FileServer::from("static"))
         .mount("/api/v1", hr::get_routes())
         .ignite()
         .await?
