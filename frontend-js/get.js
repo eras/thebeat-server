@@ -1,4 +1,4 @@
-const hrEndpoint = "http://localhost:5454/api/v1/hr";
+const hrEndpoint = "/api/v1/hr";
 
 const hrPollIntervalMs = 500;
 
