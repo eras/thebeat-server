@@ -6,22 +6,58 @@ const hrStepIntervalSec = 0.05;
 
 var audioContext = null;
 
-function enableAudio() {
-    audioContext = new AudioContext();
+const audioPoolSize = 5;
+const heartbeatAudioPool = Array.from({ length: audioPoolSize }, () => null);
+var heartbeatAudioPoolIndex = 0;
+
+var soundBuffer = null;
+
+function loadSoundBuffer(url) {
+    return new Promise((resolve, reject) => {
+	let request = new XMLHttpRequest();
+	request.open('GET', url, true);
+	request.responseType = 'arraybuffer';
+
+	request.onload = function() {
+	    audioContext.decodeAudioData(request.response, (buffer) => {
+		resolve(buffer);
+	    }, reject);
+	}
+	request.send();
+    });
+}
+
+
+async function enableAudio() {
+    try {
+	audioContext = new AudioContext();
+    }
+    catch(e) {
+	alert('Web Audio API is not supported in this browser');
+    }
+
+    soundBuffer = await loadSoundBuffer("heart-beat.wav");
 }
 
 function makeSound() {
     if (!audioContext) {
+	//console.error("No audio context");
+	return;
+    }
+    if (!soundBuffer) {
+	console.error("No sound buffer");
+	audioContext = null;
 	return;
     }
 
     try {
-	const sound = document.getElementById("sound").cloneNode(true);
-	const source = audioContext.createMediaElementSource(sound);
+	var source = audioContext.createBufferSource();
+	source.buffer = soundBuffer;
 	source.connect(audioContext.destination);
-	sound.cloneNode(true).play()
+	source.start();
     } catch (error) {
 	console.error(error);
+	audioContext = null;
     }
 }
 
