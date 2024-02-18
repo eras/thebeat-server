@@ -4,32 +4,40 @@ use crate::messages;
 use rocket::serde::json::Json;
 use rocket::Route;
 use rocket::State;
-use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 type RoomLabel = String;
 
 pub(crate) struct DatabaseContent {
-    by_room: HashMap<RoomLabel, Expiring<messages::Id, messages::HR>>,
+    by_room: Expiring<RoomLabel, Expiring<messages::Id, messages::HR>>,
 }
+
+const EXPIRATION_TIME: chrono::Duration = chrono::Duration::seconds(10);
 
 impl DatabaseContent {
     pub fn new() -> DatabaseContent {
         DatabaseContent {
-            by_room: HashMap::new(),
+            by_room: Expiring::new(EXPIRATION_TIME),
         }
     }
 
-    pub fn get(&mut self, room_name: &str) -> &mut Expiring<messages::Id, messages::HR> {
-        return self
-            .by_room
-            .entry(String::from(room_name))
-            .or_insert_with(|| Expiring::new(chrono::Duration::seconds(10)));
+    pub fn refresh(&mut self, room_name: &str) {
+        self.by_room.refresh(&String::from(room_name));
+    }
+
+    pub fn get_mut(&mut self, room_name: &str) -> &mut Expiring<messages::Id, messages::HR> {
+        self.by_room
+            .get_or_put_mut(String::from(room_name), || Expiring::new(EXPIRATION_TIME))
+            .1
+    }
+
+    pub fn purge_old_entries(&mut self) {
+        self.by_room.purge_old_entries()
     }
 
     pub fn remove(&mut self, room_name: &str) {
-        self.by_room.remove(room_name);
+        self.by_room.remove(&String::from(room_name));
     }
 }
 
@@ -52,13 +60,16 @@ pub(crate) async fn get_hr(
     room_name: String,
 ) -> Result<Json<messages::AllHR>, Error> {
     let mut content = db.content.lock().await;
-    let room = content.get(&room_name);
+    let room = content.get_mut(&room_name);
 
     room.purge_old_entries();
 
-    Ok(Json(messages::AllHR {
+    let retval = Ok(Json(messages::AllHR {
         data: (*room).all(),
-    }))
+    }));
+
+    content.purge_old_entries();
+    retval
 }
 
 #[route(PUT, uri = "/hr/<room_name>/<uuid>", format = "json", data = "<hr>")]
@@ -69,8 +80,12 @@ pub(crate) async fn put_hr(
     hr: Json<messages::PutHR>,
 ) -> Result<Json<()>, Error> {
     let mut content = db.content.lock().await;
-    let room = content.get(&room_name);
+
+    let room = content.get_mut(&room_name);
     room.put(uuid, hr.0.into());
+    content.refresh(&room_name);
+
+    content.purge_old_entries();
     Ok(Json(()))
 }
 
@@ -81,11 +96,14 @@ pub(crate) async fn del_hr(
     uuid: uuid::Uuid,
 ) -> Result<Json<()>, Error> {
     let mut content = db.content.lock().await;
-    let room = content.get(&room_name);
+    let room = content.get_mut(&room_name);
+
     room.remove(&uuid);
     if room.is_empty() {
         content.remove(&room_name)
     }
+
+    content.purge_old_entries();
     Ok(Json(()))
 }
 
