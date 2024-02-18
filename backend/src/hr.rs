@@ -25,7 +25,7 @@ impl DatabaseContent {
         return self
             .by_room
             .entry(String::from(room_name))
-            .or_insert_with(|| Expiring::new());
+            .or_insert_with(|| Expiring::new(chrono::Duration::seconds(10)));
     }
 
     pub fn remove(&mut self, room_name: &str) {

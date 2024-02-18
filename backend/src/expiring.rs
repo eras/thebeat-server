@@ -14,6 +14,7 @@ where
     value: HashMap<Key, ExpiringData<Value>>,
     by_insert: BTreeMap<u64, Key>,
     insert_count: u64,
+    expire_duration: chrono::Duration,
 }
 
 impl<Key, Value> Expiring<Key, Value>
@@ -21,11 +22,12 @@ where
     Key: Clone + std::hash::Hash + PartialEq + Eq,
     Value: Clone,
 {
-    pub fn new() -> Self {
+    pub fn new(expire_duration: chrono::Duration) -> Self {
         Expiring {
             value: HashMap::new(),
             by_insert: BTreeMap::new(),
             insert_count: 0u64,
+            expire_duration,
         }
     }
 
@@ -54,7 +56,7 @@ where
     }
 
     pub fn purge_old_entries(&mut self) {
-        let deadline = chrono::Utc::now() - chrono::Duration::seconds(10);
+        let deadline = chrono::Utc::now() - self.expire_duration;
         loop {
             match self.by_insert.first_key_value() {
                 None => break,
