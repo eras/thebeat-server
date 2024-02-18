@@ -27,6 +27,10 @@ function loadSoundBuffer(url) {
     });
 }
 
+function getRoomName() {
+    return document.getElementById("room-name").value;
+}
+
 
 async function enableAudio() {
     try {
@@ -87,7 +91,7 @@ var hrs = {};
 
 // Function to retrieve the HTTP URL
 function retrieveHR() {
-    return fetch(hrEndpoint)
+    return fetch(`${hrEndpoint}/${getRoomName()}`)
 	.then(response => {
 	    if (!response.ok) {
 		throw new Error('Network response was not ok');

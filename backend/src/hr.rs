@@ -16,15 +16,15 @@ struct DbData {
     insert_time: chrono::DateTime<chrono::Utc>,
 }
 
-pub(crate) struct DatabaseContent {
+pub(crate) struct DatabaseContentForRoom {
     data: HashMap<messages::Id, DbData>,
     by_insert: BTreeMap<u64, messages::Id>,
     insert_count: u64,
 }
 
-impl DatabaseContent {
+impl DatabaseContentForRoom {
     fn new() -> Self {
-        DatabaseContent {
+        DatabaseContentForRoom {
             data: HashMap::new(),
             by_insert: BTreeMap::new(),
             insert_count: 0u64,
@@ -76,6 +76,27 @@ impl DatabaseContent {
     }
 }
 
+type RoomLabel = String;
+
+pub(crate) struct DatabaseContent {
+    by_room: HashMap<RoomLabel, DatabaseContentForRoom>,
+}
+
+impl DatabaseContent {
+    pub fn new() -> DatabaseContent {
+        DatabaseContent {
+            by_room: HashMap::new(),
+        }
+    }
+
+    pub fn get(&mut self, room_name: String) -> &mut DatabaseContentForRoom {
+        return self
+            .by_room
+            .entry(room_name)
+            .or_insert_with(|| DatabaseContentForRoom::new());
+    }
+}
+
 #[derive(Clone)]
 pub(crate) struct Database {
     content: Arc<Mutex<DatabaseContent>>,
@@ -89,24 +110,31 @@ impl Database {
     }
 }
 
-#[route(GET, uri = "/hr")]
-pub(crate) async fn get_hr(db: &State<Database>) -> Result<Json<messages::AllHR>, Error> {
+#[route(GET, uri = "/hr/<room_name>")]
+pub(crate) async fn get_hr(
+    db: &State<Database>,
+    room_name: String,
+) -> Result<Json<messages::AllHR>, Error> {
     let mut content = db.content.lock().await;
-    content.purge_old_entries();
+    let room = content.get(room_name);
+
+    room.purge_old_entries();
 
     Ok(Json(messages::AllHR {
-        data: (*content).all(),
+        data: (*room).all(),
     }))
 }
 
-#[route(PUT, uri = "/hr/<uuid>", format = "json", data = "<hr>")]
+#[route(PUT, uri = "/hr/<room_name>/<uuid>", format = "json", data = "<hr>")]
 pub(crate) async fn put_hr(
     db: &State<Database>,
+    room_name: String,
     uuid: uuid::Uuid,
     hr: Json<messages::PutHR>,
 ) -> Result<Json<()>, Error> {
     let mut content = db.content.lock().await;
-    content.put(uuid, hr.0.into());
+    let room = content.get(room_name);
+    room.put(uuid, hr.0.into());
     Ok(Json(()))
 }
 
