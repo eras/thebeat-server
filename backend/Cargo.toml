@@ -8,9 +8,12 @@ license = "MIT"
 chrono = { version = "0.4.31", features = ["serde"] }
 parking_lot = { version = "0.12.1", features = ["arc_lock"] }
 rocket = { version = "0.5.0", features = ["json", "serde_json", "uuid", "uuid_"] }
+rocket-slogger = { version = "0.2.0", features = ["slog-term"] }
 rocket_cors = "0.6.0"
 serde = "1.0.193"
 serde_derive = "1.0.193"
 serde_json = "1.0.108"
+slog-term = "2.9.0"
+time = { version = "0.3.34", features = ["formatting", "local-offset", "macros", "std"] }
 tokio = { version = "1.35.1", features = ["full"] }
 uuid = { version = "1.6.1", features = ["v4", "serde"] }
