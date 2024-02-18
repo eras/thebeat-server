@@ -12,11 +12,6 @@ mod error;
 mod hr;
 mod messages;
 
-#[route(GET, uri = "/")]
-async fn index() -> &'static str {
-    "TheBeat"
-}
-
 fn convert_time_fmt_error(cause: time::error::Format) -> io::Error {
     io::Error::new(io::ErrorKind::Other, cause)
 }
