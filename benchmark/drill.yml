@@ -1,0 +1,20 @@
+---
+
+concurrency: 100
+base: 'http://localhost:5454'
+iterations: 100000
+rampup: 2
+
+plan:
+  - name: Requests with random items from a range
+    request:
+      url: /api/v1/hr/{{ item }}/ad9ceb77-d00e-4b7b-a9f3-f37fe835b508
+      method: PUT
+      body: '{ "hr": 42 }'
+      headers:
+        Content-Type: 'application/json'
+    with_items_range:
+      start: 1
+      stop: 10
+    shuffle: true
+    pick: 1
