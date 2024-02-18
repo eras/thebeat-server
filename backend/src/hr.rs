@@ -74,6 +74,10 @@ impl DatabaseContentForRoom {
             .map(|(k, v)| (*k, v.data.clone()))
             .collect()
     }
+
+    fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
 }
 
 type RoomLabel = String;
@@ -89,11 +93,15 @@ impl DatabaseContent {
         }
     }
 
-    pub fn get(&mut self, room_name: String) -> &mut DatabaseContentForRoom {
+    pub fn get(&mut self, room_name: &str) -> &mut DatabaseContentForRoom {
         return self
             .by_room
-            .entry(room_name)
+            .entry(String::from(room_name))
             .or_insert_with(|| DatabaseContentForRoom::new());
+    }
+
+    pub fn remove(&mut self, room_name: &str) {
+        self.by_room.remove(room_name);
     }
 }
 
@@ -116,7 +124,7 @@ pub(crate) async fn get_hr(
     room_name: String,
 ) -> Result<Json<messages::AllHR>, Error> {
     let mut content = db.content.lock().await;
-    let room = content.get(room_name);
+    let room = content.get(&room_name);
 
     room.purge_old_entries();
 
@@ -133,11 +141,26 @@ pub(crate) async fn put_hr(
     hr: Json<messages::PutHR>,
 ) -> Result<Json<()>, Error> {
     let mut content = db.content.lock().await;
-    let room = content.get(room_name);
+    let room = content.get(&room_name);
     room.put(uuid, hr.0.into());
     Ok(Json(()))
 }
 
+#[route(DELETE, uri = "/hr/<room_name>/<uuid>")]
+pub(crate) async fn del_hr(
+    db: &State<Database>,
+    room_name: String,
+    uuid: uuid::Uuid,
+) -> Result<Json<()>, Error> {
+    let mut content = db.content.lock().await;
+    let room = content.get(&room_name);
+    room.remove(&uuid);
+    if room.is_empty() {
+        content.remove(&room_name)
+    }
+    Ok(Json(()))
+}
+
 pub fn get_routes() -> Vec<Route> {
-    routes![get_hr, put_hr]
+    routes![get_hr, put_hr, del_hr]
 }
