@@ -9,6 +9,7 @@ use slog_term::{FullFormat, PlainSyncDecorator};
 use std::io;
 
 mod error;
+mod expiring;
 mod hr;
 mod messages;
 
