@@ -7,6 +7,7 @@ pub(crate) type Id = uuid::Uuid;
 pub(crate) struct HR {
     pub hr: i32,
     pub time_utc: chrono::DateTime<chrono::Utc>,
+    pub audio_file: String,
 }
 
 impl From<PutHR> for HR {
@@ -14,6 +15,7 @@ impl From<PutHR> for HR {
         HR {
             hr: put_hr.hr,
             time_utc: chrono::Utc::now(),
+            audio_file: "".to_string(),
         }
     }
 }

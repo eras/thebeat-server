@@ -4,6 +4,7 @@ use crate::messages;
 use rocket::serde::json::Json;
 use rocket::Route;
 use rocket::State;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -12,6 +13,8 @@ type RoomLabel = String;
 pub(crate) struct DatabaseContent {
     by_room: Expiring<RoomLabel, Expiring<messages::Id, messages::HR>>,
 }
+
+const AUDIO_FILES: &[&str] = &["heart-beat.wav", "beep.wav"];
 
 const EXPIRATION_TIME: chrono::Duration = chrono::Duration::seconds(10);
 
@@ -72,6 +75,37 @@ pub(crate) async fn get_hr(
     retval
 }
 
+fn least_used_audio_in_room(room: &Expiring<messages::Id, messages::HR>) -> Option<String> {
+    let mut counts = HashMap::new();
+    for audio_file in AUDIO_FILES {
+        counts.insert(audio_file.to_string(), 0u32);
+    }
+    use std::collections::hash_map::Entry;
+    for (_id, data) in room.all_ref() {
+        match counts.entry(data.audio_file.clone()) {
+            Entry::Occupied(mut e) => {
+                *e.get_mut() += 1;
+            }
+            Entry::Vacant(_) => (),
+        }
+    }
+
+    if counts.len() == 0 {
+        None
+    } else {
+        // Find the entry in counts with smallest count
+        let mut smallest_count = u32::MAX;
+        let mut smallest_key = String::new();
+        for (key, count) in counts {
+            if count < smallest_count {
+                smallest_count = count;
+                smallest_key = key.clone();
+            }
+        }
+        Some(smallest_key)
+    }
+}
+
 #[route(PUT, uri = "/hr/<room_name>/<uuid>", format = "json", data = "<hr>")]
 pub(crate) async fn put_hr(
     db: &State<Database>,
@@ -82,9 +116,20 @@ pub(crate) async fn put_hr(
     let mut content = db.content.lock().await;
 
     let room = content.get_mut(&room_name);
-    room.put(uuid, hr.0.into());
-    content.refresh(&room_name);
+    let least_used_audio = least_used_audio_in_room(&room);
+    let mut db_hr: messages::HR = hr.0.into();
+    match room.get(&uuid) {
+        None => match least_used_audio {
+            Some(least_used_audio) => db_hr.audio_file = least_used_audio,
+            None => (),
+        },
+        Some(old_hr) => {
+            db_hr.audio_file = old_hr.audio_file.clone();
+        }
+    }
+    room.put(uuid, db_hr);
 
+    content.refresh(&room_name);
     content.purge_old_entries();
     Ok(Json(()))
 }
