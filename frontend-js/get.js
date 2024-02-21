@@ -9,6 +9,7 @@ var audioContext = null;
 const audioPoolSize = 5;
 const heartbeatAudioPool = Array.from({ length: audioPoolSize }, () => null);
 var heartbeatAudioPoolIndex = 0;
+var volumeSlider = null;
 
 var soundBuffer = null;
 
@@ -31,8 +32,29 @@ function getRoomName() {
     return document.getElementById("room-name").value;
 }
 
+var startedPolling = false;
+
+function startPolling() {
+    if (startedPolling) {
+	return;
+    }
+    startedPolling = true;
+    retrievePeriodically(500);
+    stepPeriodically();
+}
+
+function stopPolling() {
+    if (!startedPolling) {
+	return;
+    }
+    startedPolling = false;
+    retrievePeriodically(500);
+    stepPeriodically();
+}
+
 
 async function enableAudio() {
+    startPolling();
     try {
 	audioContext = new AudioContext();
     }
@@ -45,7 +67,7 @@ async function enableAudio() {
 
 function makeSound() {
     if (!audioContext) {
-	//console.error("No audio context");
+	console.error("No audio context");
 	return;
     }
     if (!soundBuffer) {
@@ -57,7 +79,13 @@ function makeSound() {
     try {
 	var source = audioContext.createBufferSource();
 	source.buffer = soundBuffer;
-	source.connect(audioContext.destination);
+
+	var volume = Math.pow(10, parseFloat(volumeSlider.value) / 20);
+	const gain = audioContext.createGain();
+	gain.gain.value = volume; // Default volume value
+	
+	source.connect(gain);
+	gain.connect(audioContext.destination);
 	source.start();
     } catch (error) {
 	console.error(error);
@@ -140,6 +168,14 @@ function stepPeriodically() {
 }
 
 function start() {
-    retrievePeriodically(500);
-    stepPeriodically();
+    // Get reference to the volume slider
+    volumeSlider = document.getElementById('volumeSlider');
+
+    // Function to handle volume change
+    function handleVolumeChange() {
+	document.getElementById("volumeDb").innerHTML = `${volumeSlider.value}dB`;
+    }
+
+    // Attach event listener to volume slider
+    volumeSlider.addEventListener('input', handleVolumeChange);
 }
