@@ -63,11 +63,11 @@ where
     }
 
     pub fn put(&mut self, key: Key, value: Value) {
-        self.remove(&key.clone());
+        self.remove(&key);
         self.values.insert(
             key.clone(),
             ExpiringData {
-                value: value,
+                value,
                 insert_count: self.insert_count,
                 insert_time: chrono::Utc::now(),
             },
@@ -76,14 +76,14 @@ where
         self.insert_count += 1
     }
 
-    pub fn refresh(&mut self, key: &Key) -> bool {
-        match self.values.get_mut(key) {
+    pub fn refresh(&mut self, key: Key) -> bool {
+        match self.values.get_mut(&key) {
             None => false,
             Some(ref mut v) => {
                 self.by_insert.remove(&v.insert_count);
                 v.insert_count = self.insert_count;
                 v.insert_time = chrono::Utc::now();
-                self.by_insert.insert(v.insert_count.clone(), key.clone());
+                self.by_insert.insert(self.insert_count, key);
                 self.insert_count += 1;
                 true
             }

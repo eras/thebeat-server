@@ -26,7 +26,7 @@ impl DatabaseContent {
     }
 
     pub fn refresh(&mut self, room_name: &str) {
-        self.by_room.refresh(&String::from(room_name));
+        self.by_room.refresh(String::from(room_name));
     }
 
     pub fn get_mut(&mut self, room_name: &str) -> &mut Expiring<messages::Id, messages::HR> {
