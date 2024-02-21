@@ -128,6 +128,7 @@ pub(crate) async fn put_hr(
         }
     }
     room.put(uuid, db_hr);
+    room.purge_old_entries();
 
     content.refresh(&room_name);
     content.purge_old_entries();
