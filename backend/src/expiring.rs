@@ -1,17 +1,17 @@
 use std::collections::{BTreeMap, HashMap};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct ExpiringData<Value> {
     value: Value,
     insert_count: u64,
     insert_time: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct Expiring<Key, Value>
 where
-    Key: Clone,
-    Value: Clone,
+    Key: Clone + std::fmt::Debug,
+    Value: Clone + std::fmt::Debug,
 {
     values: HashMap<Key, ExpiringData<Value>>,
     by_insert: BTreeMap<u64, Key>,
@@ -21,8 +21,8 @@ where
 
 impl<Key, Value> Expiring<Key, Value>
 where
-    Key: Clone + std::hash::Hash + PartialEq + Eq,
-    Value: Clone,
+    Key: Clone + std::hash::Hash + PartialEq + Eq + std::fmt::Debug,
+    Value: Clone + std::fmt::Debug,
 {
     pub fn new(expire_duration: chrono::Duration) -> Self {
         Expiring {
