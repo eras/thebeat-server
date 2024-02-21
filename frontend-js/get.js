@@ -11,7 +11,7 @@ const heartbeatAudioPool = Array.from({ length: audioPoolSize }, () => null);
 var heartbeatAudioPoolIndex = 0;
 var volumeSlider = null;
 
-var soundBuffer = null;
+var soundBuffers = {};
 
 function loadSoundBuffer(url) {
     return new Promise((resolve, reject) => {
@@ -62,25 +62,42 @@ async function enableAudio() {
 	alert('Web Audio API is not supported in this browser');
     }
 
-    soundBuffer = await loadSoundBuffer("heart-beat.wav");
+    const audioFiles = [
+	"heart-beat.wav",
+	"beep.wav",
+	"heart-beat500.wav",
+	"heart-beat1000.wav",
+	"heart-beat1500.wav",
+	"beep-100.wav",
+	"beep-200.wav",
+	"beep-300.wav",
+	"beep-400.wav",
+    ];
+    for (audioFile of audioFiles) {
+	soundBuffers[audioFile] = await loadSoundBuffer(audioFile);
+    }
 }
 
-function makeSound() {
+function makeSound(audio_file) {
     if (!audioContext) {
 	console.error("No audio context");
 	return;
     }
-    if (!soundBuffer) {
-	console.error("No sound buffer");
+    if (Object.keys(soundBuffers).length === 0) {
+	console.error("No sound buffers");
 	audioContext = null;
 	return;
     }
 
     try {
 	var source = audioContext.createBufferSource();
-	source.buffer = soundBuffer;
+	source.buffer = soundBuffers[audio_file];
 
-	var volume = Math.pow(10, parseFloat(volumeSlider.value) / 20);
+	var dbVolume = parseFloat(volumeSlider.value);
+	if (audio_file == "beep.wav") {
+	    dbVolume -= 10; // hack
+	}
+	var volume = Math.pow(10, dbVolume / 20);
 	const gain = audioContext.createGain();
 	gain.gain.value = volume; // Default volume value
 	
@@ -96,20 +113,26 @@ function makeSound() {
 class HR {
     #hr;
     #time;
+    #audio_file;
 
     constructor() {
 	this.#time = 0;
 	this.#hr = 0;
+	this.#audio_file = "heart-beat.wav";
     }
 
     set hr(value) {
 	this.#hr = value;
     }
 
+    set audio_file(value) {
+	this.#audio_file = value;
+    }
+
     step() {
 	this.#time += hrStepIntervalSec * this.#hr / 60;
 	if (this.#time >= 1) {
-	    makeSound();
+	    makeSound(this.#audio_file);
 	    this.#time -= Math.trunc(this.#time);
 	}
     }
@@ -139,6 +162,7 @@ function processResponse(response) {
 	    hrs[key] = new HR();
 	}
 	hrs[key].hr = value.hr;
+	hrs[key].audio_file = value.audio_file;
     }
     let allKeys = Object.keys(hrs);
     for (let key of allKeys) {

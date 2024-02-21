@@ -14,7 +14,17 @@ pub(crate) struct DatabaseContent {
     by_room: Expiring<RoomLabel, Expiring<messages::Id, messages::HR>>,
 }
 
-const AUDIO_FILES: &[&str] = &["heart-beat.wav", "beep.wav"];
+const AUDIO_FILES: &[&str] = &[
+    "heart-beat.wav",
+    "beep.wav",
+    "heart-beat500.wav",
+    "heart-beat1000.wav",
+    "heart-beat1500.wav",
+    // "beep-100.wav",
+    // "beep-200.wav",
+    // "beep-300.wav",
+    // "beep-400.wav",
+];
 
 const EXPIRATION_TIME: chrono::Duration = chrono::Duration::seconds(10);
 
