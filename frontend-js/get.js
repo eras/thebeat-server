@@ -1,3 +1,4 @@
+const volumeEndpoint = "/api/v1/volume";
 const hrEndpoint = "/api/v1/hr";
 
 const hrPollIntervalMs = 500;
@@ -10,6 +11,18 @@ const audioPoolSize = 5;
 const heartbeatAudioPool = Array.from({ length: audioPoolSize }, () => null);
 var heartbeatAudioPoolIndex = 0;
 var volumeSlider = null;
+var volumeChangeIndex = -1;
+
+function generateUUID() {
+    let d = new Date().getTime();
+    let uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+	let r = (d + Math.random()*16)%16 | 0;
+	d = Math.floor(d/16);
+	return (c=='x' ? r : (r&0x3|0x8)).toString(16);
+    });
+    return uuid;
+}
+var webUuid = generateUUID();
 
 var soundBuffers = {};
 
@@ -164,6 +177,14 @@ function processResponse(response) {
 	hrs[key].hr = value.hr;
 	hrs[key].audio_file = value.audio_file;
     }
+    if (response.volume_change_index != volumeChangeIndex) {
+	volumeChangeIndex = response.volume_change_index;
+	// Assume we're getting old stuff and our local value always beats our old value
+	if (response.volume_changer_uuid != webUuid) {
+	    volumeSlider.value = response.volume;
+	    handleVolumeChange();
+	}
+    }
     let allKeys = Object.keys(hrs);
     for (let key of allKeys) {
 	if (!(key in visited)) {
@@ -191,14 +212,27 @@ function stepPeriodically() {
     }, hrStepIntervalSec * 1000);
 }
 
+// Function to handle volume change
+function updateVolumeLabel() {
+    document.getElementById("volumeDb").innerHTML = `${volumeSlider.value}dB`;
+}
+
+// Function to handle volume change
+function handleVolumeChange() {
+    fetch(`${volumeEndpoint}/${getRoomName()}`, {
+	method: 'POST',
+	headers: {
+	    'Content-Type': 'application/json'
+	},
+	body: JSON.stringify({"volume": parseFloat(volumeSlider.value),
+			      "volume_changer_uuid": webUuid })
+    })
+    updateVolumeLabel();
+}
+
 function start() {
     // Get reference to the volume slider
     volumeSlider = document.getElementById('volumeSlider');
-
-    // Function to handle volume change
-    function handleVolumeChange() {
-	document.getElementById("volumeDb").innerHTML = `${volumeSlider.value}dB`;
-    }
 
     // Attach event listener to volume slider
     volumeSlider.addEventListener('input', handleVolumeChange);

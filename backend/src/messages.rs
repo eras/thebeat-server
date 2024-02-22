@@ -23,9 +23,33 @@ impl From<PutHR> for HR {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub(crate) struct PutHR {
     pub hr: i32,
+    pub volume: Option<f64>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub(crate) struct PutVolume {
+    pub volume: f64,
+    pub volume_changer_uuid: uuid::Uuid,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub(crate) struct PutVolumeResponse {
+    pub volume: f64,
+    pub volume_change_index: u64,
+    pub volume_changer_uuid: uuid::Uuid,
 }
 
 #[derive(Clone, Debug, Serialize)]
 pub struct AllHR {
     pub data: HashMap<Id, HR>,
+    pub volume_change_index: u64,
+    pub volume: f64,
+    pub volume_changer_uuid: uuid::Uuid,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct HRPutResponse {
+    pub volume_change_index: u64,
+    pub volume_changer_uuid: uuid::Uuid,
+    pub volume: f64,
 }
