@@ -26,6 +26,8 @@ var webUuid = generateUUID();
 
 var soundBuffers = {};
 
+var missedResponseCount = 0;
+
 function loadSoundBuffer(url) {
     return new Promise((resolve, reject) => {
 	let request = new XMLHttpRequest();
@@ -168,6 +170,14 @@ function retrieveHR() {
 }
 
 function processResponse(response) {
+    if (response === undefined) {
+	missedResponseCount += 1
+	if (missedResponseCount == 10) {
+	    hrs = {};
+	}
+	return;
+    }
+    missedResponseCount = 0
     let visited = {};
     for (let [key, value] of Object.entries(response.data)) {
 	visited[key] = true;
