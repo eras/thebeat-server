@@ -192,7 +192,7 @@ function processResponse(response) {
 	// Assume we're getting old stuff and our local value always beats our old value
 	if (response.volume_changer_uuid != webUuid) {
 	    volumeSlider.value = response.volume;
-	    handleVolumeChange();
+	    updateVolumeLabel();
 	}
     }
     let allKeys = Object.keys(hrs);
