@@ -35,7 +35,7 @@ pub(crate) struct DatabaseContent {
 
 const AUDIO_FILES: &[&str] = &[
     "heart-beat.wav",
-    "beep.wav",
+    // "beep.wav",
     "heart-beat500.wav",
     "heart-beat1000.wav",
     "heart-beat1500.wav",
